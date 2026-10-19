@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>우리 학교 시간표</title>
+<style>
+:root{--primary:#5b7cfa;--ink:#202735;--muted:#7b8497;--bg:#f5f7fb;--line:#e6eaf2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
+button,input,select{font:inherit}button{cursor:pointer}.container{width:min(1050px,92%);margin:0 auto;padding:28px 0 55px}
+header{background:linear-gradient(135deg,#5b7cfa,#7657e8);color:#fff;border-radius:24px;padding:30px;margin-bottom:20px;box-shadow:0 12px 30px #5b7cfa30}
+header h1{margin:0;font-size:clamp(27px,5vw,40px)}header p{margin:10px 0 0;opacity:.9}
+.card{background:#fff;border-radius:20px;padding:22px;margin-bottom:18px;box-shadow:0 5px 20px #1e28460b}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.card h2{font-size:21px;margin:0}
+button{border:0;border-radius:11px;padding:10px 14px;font-weight:750}.primary{background:var(--primary);color:white}.secondary{background:#eef2ff;color:#4d62c7}.danger{background:#fff0f0;color:#bd3434}.muted{color:var(--muted);font-size:13px}
+form .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;font-size:13px;font-weight:750;margin-bottom:6px}.field input,.field select{width:100%;padding:11px 12px;border:1px solid #dfe3ec;border-radius:10px;background:white;color:var(--ink)}
+.period-editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.period-input{display:grid;grid-template-columns:56px 1fr;align-items:center;gap:8px}.period-input label{font-size:13px;font-weight:750}.period-input input{width:100%;padding:10px;border:1px solid #dfe3ec;border-radius:10px}
+.form-actions{display:flex;gap:8px;align-items:center;margin-top:15px;flex-wrap:wrap}.form-actions button{flex:1}.notice{font-size:13px;color:#596681;background:#f4f6ff;padding:12px 14px;border-radius:12px;margin-top:12px;line-height:1.55}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button.active{background:var(--primary);color:white}
+.saved-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.saved-card{border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}.saved-card.selected{border:2px solid var(--primary);background:#f8f9ff;padding:15px}
+.saved-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.saved-top h3{margin:0 0 5px;font-size:18px;overflow-wrap:anywhere}.tag{font-size:11px;font-weight:800;background:#eef2ff;color:#4d62c7;padding:5px 8px;border-radius:20px;white-space:nowrap}
+.mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:14px}.mini-period{background:#f7f8fc;border-radius:9px;padding:9px;font-size:13px;overflow-wrap:anywhere}.mini-period strong{display:block;color:var(--primary);font-size:11px;margin-bottom:3px}.card-actions{display:flex;gap:7px;margin-top:13px}.card-actions button{flex:1}
+.empty{padding:25px;text-align:center;color:var(--muted);background:#f8f9fc;border-radius:14px;line-height:1.7}
+.admin-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.admin-status{font-size:13px;color:var(--muted);margin-top:5px}.modal{display:none;position:fixed;inset:0;background:#10172a80;z-index:10;align-items:center;justify-content:center;padding:18px}.modal.show{display:flex}.modal-box{width:min(420px,100%);background:white;border-radius:20px;padding:23px}.modal-box h2{margin:0 0 8px}.modal-box p{color:var(--muted);font-size:13px}.modal-box input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;margin:5px 0}.modal-actions{display:flex;gap:8px;margin-top:10px}.modal-actions button{flex:1}footer{text-align:center;color:var(--muted);font-size:12px;margin-top:25px}
+@media(max-width:600px){.container{padding-top:16px}.card{padding:17px}header{padding:24px}.period-editor,.fields{grid-template-columns:1fr!important}.card-head{align-items:flex-start}.saved-list{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+<header><h1>📚 우리 학교 시간표</h1><p>중학교·고등학교 시간표를 만들고 다른 사람들과 공유하세요.</p></header>
+
+<section class="card">
+  <div class="card-head"><h2>시간표 만들기</h2><span class="tag">누구나 생성 가능</span></div>
+  <form id="createForm">
+    <div class="fields">
+      <div class="field"><label for="schoolType">학교 구분</label><select id="schoolType"><option value="high">고등학교 · 50분 수업</option><option value="middle">중학교 · 45분 수업</option></select></div>
+      <div class="field"><label for="scheduleName">시간표 이름</label><input id="scheduleName" maxlength="60" required placeholder="예: 2학년 5반"></div>
+    </div>
+    <div id="periodEditor" class="period-editor"></div>
+    <div class="form-actions"><button class="primary" id="saveButton" type="submit">시간표 저장 및 공유</button><button class="secondary" type="button" id="clearFormButton">입력 초기화</button></div>
+    <div class="notice">저장된 시간표는 이 사이트를 방문한 누구나 볼 수 있습니다. 일반 사용자는 시간표를 삭제할 수 없으며, 삭제는 관리자만 가능합니다.</div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>공유된 시간표</h2><button class="secondary" id="refreshButton" type="button">새로고침</button></div>
+  <div class="toolbar" style="margin-bottom:15px">
+    <button class="secondary active" data-filter="all" type="button">전체</button>
+    <button class="secondary" data-filter="high" type="button">고등학교</button>
+    <button class="secondary" data-filter="middle" type="button">중학교</button>
+  </div>
+  <div id="savedSchedules" class="saved-list"><div class="empty">시간표를 불러오는 중...</div></div>
+</section>
+
+<section class="card">
+  <div class="admin-row"><div><h2>🔐 관리자</h2><div class="admin-status" id="adminStatus">일반 사용자 모드 · 시간표 삭제 불가</div></div><button class="secondary" id="adminButton" type="button">관리자 로그인</button></div>
+</section>
+<footer>우리 학교 시간표 · 누구나 만들고 함께 보는 시간표</footer>
+</div>
+
+<div class="modal" id="adminModal">
+ <div class="modal-box">
+  <h2>관리자 로그인</h2><p>기존에 사용하던 Supabase 관리자 계정으로 로그인하세요.</p>
+  <input id="adminEmail" type="email" placeholder="관리자 이메일" autocomplete="username">
+  <input id="adminPassword" type="password" placeholder="관리자 비밀번호" autocomplete="current-password">
+  <div class="modal-actions"><button class="secondary" id="cancelLogin" type="button">취소</button><button class="primary" id="confirmLogin" type="button">로그인</button></div>
+ </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* Supabase 프로젝트의 URL과 Publishable/anon key를 입력하세요. */
+const SUPABASE_URL = "여기에_Supabase_URL_입력";
+const SUPABASE_PUBLISHABLE_KEY = "여기에_Supabase_Publishable_Key_입력";
+const db = (SUPABASE_URL.includes("여기에_") || SUPABASE_PUBLISHABLE_KEY.includes("여기에_"))
+  ? null : window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+/* 중학교는 45분 수업이며, 4교시까지 누적된 20분 차이만큼 점심시간과 5~7교시를 앞당김 */
+const TIMES = {
+ high: [["09:00","09:50"],["10:00","10:50"],["11:00","11:50"],["12:00","12:50"],["13:40","14:30"],["14:40","15:30"],["15:40","16:30"]],
+ middle: [["09:00","09:45"],["09:55","10:40"],["10:50","11:35"],["11:45","12:30"],["13:20","14:05"],["14:15","15:00"],["15:10","15:55"]]
+};
+let isAdmin = false;
+let activeFilter = "all";
+let allSchedules = [];
+
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function makePeriodInputs() {
+ const type = $("schoolType").value;
+ const count = TIMES[type].length;
+ const previous = [...document.querySelectorAll("[data-subject]")].map(el => el.value);
+ $("periodEditor").innerHTML = Array.from({length:count},(_,i)=>`
+  <div class="period-input"><label for="subject${i}">${i+1}교시</label><input id="subject${i}" data-subject="${i}" maxlength="60" placeholder="과목 입력" value="${esc(previous[i] || "")}" required></div>
+ `).join("");
+}
+function clearForm() { $("scheduleName").value=""; document.querySelectorAll("[data-subject]").forEach(el=>el.value=""); }
+function subjectsFromForm() { return [...document.querySelectorAll("[data-subject]")].map(el=>el.value.trim()); }
+function renderSchedules() {
+ const filtered = allSchedules.filter(s => activeFilter==="all" || s.school_type===activeFilter);
+ const root = $("savedSchedules");
+ if (!filtered.length) {
+  root.innerHTML = `<div class="empty" style="grid-column:1/-1">아직 저장된 시간표가 없습니다.<br>위에서 첫 시간표를 만들어 보세요.</div>`;
+  return;
+ }
+ root.innerHTML = filtered.map(s => {
+  const type = s.school_type === "middle" ? "중학교" : "고등학교";
+  const subjects = Array.isArray(s.subjects) ? s.subjects : [];
+  const times = TIMES[s.school_type] || TIMES.high;
+  return `<article class="saved-card">
+   <div class="saved-top"><div><h3>${esc(s.name)}</h3><div class="muted">${type} · ${times.length}교시</div></div><span class="tag">${type}</span></div>
+   <div class="mini-grid">${subjects.map((subject,i)=>`<div class="mini-period"><strong>${i+1}교시 · ${esc(times[i]?.join(" ~ ") || "")}</strong>${esc(subject || "미입력")}</div>`).join("")}</div>
+   ${isAdmin ? `<div class="card-actions"><button class="danger" type="button" data-delete="${esc(s.id)}">시간표 삭제</button></div>` : ""}
+  </article>`;
+ }).join("");
+ root.querySelectorAll("[data-delete]").forEach(btn => btn.addEventListener("click",()=>deleteSchedule(btn.dataset.delete)));
+}
+async function loadSchedules() {
+ if (!db) {
+  $("savedSchedules").innerHTML = `<div class="empty" style="grid-column:1/-1">온라인 데이터베이스가 아직 연결되지 않았습니다.<br>코드의 Supabase URL과 Publishable Key를 입력한 뒤 다시 배포하세요.</div>`;
+  return;
+ }
+ $("savedSchedules").innerHTML = `<div class="empty">시간표를 불러오는 중...</div>`;
+ const {data,error} = await db.from("timetables").select("id,name,school_type,subjects,created_at").order("created_at",{ascending:false});
+ if (error) {
+  console.error(error);
+  $("savedSchedules").innerHTML = `<div class="empty" style="grid-column:1/-1">시간표를 불러오지 못했습니다.<br>${esc(error.message)}<br>Supabase 테이블과 RLS 정책을 확인하세요.</div>`;
+  return;
+ }
+ allSchedules = data || [];
+ renderSchedules();
+}
+async function createSchedule(event) {
+ event.preventDefault();
+ if (!db) { alert("먼저 코드에 Supabase URL과 Publishable Key를 입력해야 합니다."); return; }
+ const name = $("scheduleName").value.trim();
+ const subjects = subjectsFromForm();
+ if (!name) { alert("시간표 이름을 입력하세요."); return; }
+ if (subjects.some(s=>!s)) { alert("모든 교시의 과목을 입력하세요."); return; }
+ const school_type = $("schoolType").value;
+ $("saveButton").disabled = true;
+ $("saveButton").textContent = "저장 중...";
+ const {error} = await db.from("timetables").insert({name,school_type,subjects});
+ $("saveButton").disabled = false;
+ $("saveButton").textContent = "시간표 저장 및 공유";
+ if (error) { console.error(error); alert("저장하지 못했습니다: " + error.message); return; }
+ clearForm();
+ await loadSchedules();
+ alert("시간표가 저장되어 다른 사람에게도 공개되었습니다.");
+}
+async function deleteSchedule(id) {
+ if (!isAdmin) { alert("관리자만 시간표를 삭제할 수 있습니다."); return; }
+ const item = allSchedules.find(s=>String(s.id)===String(id));
+ if (!item || !confirm(`"${item.name}" 시간표를 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
+ const {error} = await db.from("timetables").delete().eq("id",id);
+ if (error) { console.error(error); alert("삭제하지 못했습니다. 관리자 권한과 Supabase RLS 정책을 확인하세요.\n"+error.message); return; }
+ await loadSchedules();
+}
+function updateAdminUI() {
+ $("adminStatus").textContent = isAdmin ? "관리자 모드 · 시간표 삭제 가능" : "일반 사용자 모드 · 시간표 삭제 불가";
+ $("adminButton").textContent = isAdmin ? "관리자 로그아웃" : "관리자 로그인";
+ renderSchedules();
+}
+async function loginAdmin() {
+ if (!db) { alert("먼저 Supabase URL과 Publishable Key를 설정하세요."); return; }
+ const email = $("adminEmail").value.trim(), password = $("adminPassword").value;
+ if (!email || !password) { alert("이메일과 비밀번호를 입력하세요."); return; }
+ const {error} = await db.auth.signInWithPassword({email,password});
+ if (error) { alert("로그인 실패: "+error.message); return; }
+ isAdmin = true;
+ $("adminModal").classList.remove("show");
+ $("adminPassword").value = "";
+ updateAdminUI();
+ alert("관리자 로그인 완료");
+}
+async function logoutAdmin() {
+ if (db) await db.auth.signOut();
+ isAdmin = false;
+ updateAdminUI();
+}
+$("schoolType").addEventListener("change",makePeriodInputs);
+$("createForm").addEventListener("submit",createSchedule);
+$("clearFormButton").addEventListener("click",clearForm);
+$("refreshButton").addEventListener("click",loadSchedules);
+document.querySelectorAll("[data-filter]").forEach(btn=>btn.addEventListener("click",()=>{
+ activeFilter=btn.dataset.filter;
+ document.querySelectorAll("[data-filter]").forEach(b=>b.classList.toggle("active",b===btn));
+ renderSchedules();
+}));
+$("adminButton").addEventListener("click",()=>isAdmin?logoutAdmin():$("adminModal").classList.add("show"));
+$("cancelLogin").addEventListener("click",()=>$("adminModal").classList.remove("show"));
+$("confirmLogin").addEventListener("click",loginAdmin);
+$("adminPassword").addEventListener("keydown",e=>{if(e.key==="Enter")loginAdmin()});
+$("adminModal").addEventListener("click",e=>{if(e.target===$("adminModal"))$("adminModal").classList.remove("show")});
+if (db) {
+ db.auth.getSession().then(({data})=>{isAdmin=!!data.session;updateAdminUI();});
+ db.auth.onAuthStateChange((_event,session)=>{isAdmin=!!session;updateAdminUI();});
+}
+makePeriodInputs();
+loadSchedules();
+</script>
+</body>
+</html>
